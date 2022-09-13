@@ -1,124 +1,116 @@
-let element = (id) => document.getElementById(id);
+let form = document.getElementById("form");
 
-let classes = (classes) => document.getElementsByClassName(classes);
+const retriveEntries = () => {
+  let entries = localStorage.getItem("userEntry");
 
-let user_entries = [];
-
-function fillTable() {
-  let obj = localStorage.getItem("user_entries");
-  if (obj) {
-    user_entries = JSON.parse(obj);
+  if (entries) {
+    entries = JSON.parse(entries);
   } else {
-    user_entries = [];
+    entries = [];
   }
-  return user_entries;
-}
-user_entries = fillTable();
+  return entries;
+};
 
-let username = element("name"),
-  email = element("email"),
-  password = element("password"),
-  tc = element("tc"),
-  dob = element("dob");
+let Entries = retriveEntries();
 
-let errormsg = classes("errormsg");
+const displayEntries = () => {
+  const entries = retriveEntries();
 
-let form = element("form");
+  const rows = entries
+    .map((entry) => {
+      const name = `<td class="td">${entry.name}</td>`;
+      const email = `<td class="td">${entry.email}</td>`;
+      const password = `<td class="td">${entry.password}</td>`;
+      const dob = `<td class="td">${entry.dob}</td>`;
+      const acceptConditions = `<td class="td">${entry.acceptConditions}</td>`;
 
-function verify(elem, message, cnd) {
-  if (cnd) {
-    elem.style.border = "2px solid red";
-    elem.setCustomValidity(message);
-    elem.reportValidity();
-  } else {
-    elem.style.border = "2px solid green";
-    elem.setCustomValidity("");
-  }
-}
+      const row = `<tr>${name} ${email} ${password} ${dob} ${acceptConditions}</tr>`;
+      return row;
+    })
+    .join("\n");
 
-function checkDOB() {
-  let age = new Date().getFullYear() - new Date(dob.value).getFullYear();
-  if (age < 18 || age > 55) {
-    return false;
-  } else {
-    return true;
-  }
-}
-let message_name = "Username must be at least 3 characters long";
-let message_email = "Email must be valid";
-let message_agree = "You must agree to the terms and conditions";
-let message_dob = "You age must be between 18 and 55 to continue";
+  let tableDiv = document.getElementById("tableDiv");
 
-username.addEventListener("input", (e) => {
-  let cond_name = username.value.length < 3;
-  e.preventDefault();
-  verify(username, message_name, cond_name);
-});
+  tableDiv.innerHTML = `<table class="table" border="2">
+  <tr>
+    <th class="th">Name</th>
+    <th class="th">Email</th>
+    <th class="th">Password</th>
+    <th class="th">Dob</th>
+    <th class="th">Accepted terms?</th>
+  </tr>
+    ${rows}
+  </table>`;
+};
 
-email.addEventListener("input", (e) => {
-  let cond_email = !(email.value.includes("@") && email.value.includes("."));
-  e.preventDefault();
-  verify(email, message_email, cond_email);
-});
+const saveUserFrom = (event) => {
+  event.preventDefault();
 
-dob.addEventListener("input", (e) => {
-  let cond_dob = !checkDOB();
-  e.preventDefault();
-  verify(dob, message_dob, cond_dob);
-});
-tc.addEventListener("input", (e) => {
-  let cond_agree = !tc.checked;
-  e.preventDefault();
-  verify(tc, message_agree, cond_agree);
-});
+  let name = document.getElementById("name").value;
+  let email = document.getElementById("email").value;
+  let password = document.getElementById("password").value;
+  let dob = document.getElementById("dob").value;
+  let acceptConditions = document.getElementById("agree").checked;
 
-function makeObject() {
-  let check = "No";
-  if (tc.checked) {
-    check = "Yes";
-  }
-  let obj = {
-    name: username.value,
-    email: email.value,
-    password: password.value,
-    dob: dob.value,
-    checked: check,
+  let entry_obj = {
+    name,
+    email,
+    password,
+    dob,
+    acceptConditions,
   };
-  return obj;
+
+  Entries.push(entry_obj);
+
+  localStorage.setItem("userEntry", JSON.stringify(Entries));
+
+  displayEntries();
+};
+
+form.addEventListener("submit", saveUserFrom);
+
+displayEntries();
+
+function getAge(today, birthDate) {
+  var age = today.getFullYear() - birthDate.getFullYear();
+  var m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
 }
 
-function displayTable() {
-  let table = element("user-table");
-  let entries = user_entries;
-  let str = `<tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Password</th>
-                    <th>Dob</th>
-                    <th>Accepted terms?</th>
-                </tr>\n`;
-  for (let i = 0; i < entries.length; i++) {
-    str += `<tr>
-                    <td>${entries[i].name}</td>
-                    <td>${entries[i].email}</td>
-                    <td>${entries[i].password}</td>
-                    <td>${entries[i].dob}</td>
-                    <td>${entries[i].checked}</td>
-                </tr>\n`;
-  }
-  table.innerHTML = str;
-}
+let dateELE = document.getElementById("dob");
 
-form.addEventListener("submit", (e) => {
-  let cond_agree = !tc.checked;
-  e.preventDefault();
-  if (!cond_agree) {
-    let obj = makeObject();
-    user_entries.push(obj);
-    localStorage.setItem("user_entries", JSON.stringify(user_entries));
+dateELE.addEventListener("change", () => {
+  let [year, month, date] = document.getElementById("dob").value.split("-");
+
+  let dob = new Date(year, month, date);
+  let Today = new Date();
+
+  age = getAge(Today, dob);
+
+  dateELE.style.border = "2px solid rgba(0, 0, 0, 0.4)";
+  if (age < 18 || age > 55) {
+    dateELE.setCustomValidity("Your age is not lies between 18 and 55");
+    dateELE.style.border = "2px solid red";
+    return;
+  } else {
+    dateELE.setCustomValidity("");
   }
-  displayTable();
 });
 
-displayTable();
+const email = document.getElementById("email");
+
+email.addEventListener("input", () => validate(email));
+
+function validate(ele) {
+  if (ele.validity.typeMismatch) {
+    ele.setCustomValidity("The Email is not in the right format!!!");
+    ele.reportValidity();
+  } else {
+    ele.setCustomValidity("");
+  }
+}
+
 
